@@ -1,131 +1,125 @@
-#coding: utf-8
-import random
-#генерация
+import collections
+from queue import PriorityQueue
 
-def generate_array(length=100):  # генерируем случайный массив
-    array = []
-    while len(array) < length:
-        array.append(random.randint(0, 100))
-    return array
-#для хэша
-class ClassForRehash:
-    def __init__(self, value1):
-        self.value1 = value1
-        self.hash = int((((value1 % ClassForRehash.MAX_HASH_TABLE) * 331) & 127) % ClassForRehash.MAX_HASH_TABLE)
-        self.hashh = int(value1)
+test = collections.deque()
+class Position:
+    def __init__(self, position, start_distance,finish_distance):
+        self.position = position
+        self.start_distance = start_distance
+        self.finish_distance = finish_distance
 
-    MAX_HASH_TABLE = 8
+    def __str__(self):
+        return '\n'.join((N*'{:3}').format(*[i%(N*N) for i in self.position[i:]]) for i in range(0, N*N, N))
 
-# просто рехэширование
-class SimpleRehashTable:
-
-    def __init__(self, length):
-        self.table = [None] * length
-
-    def add_el(self, element):
-        original_hash = element.hash
-        if self.table[original_hash] is None:
-            self.table[original_hash] = element
-            print("объект со значением %i имеет хэш: %i (рехеширование не требовалось)"
-                  % (self.table[original_hash].value1, element.hash))
-            return
-
-        """""
-        простое рехеширование
-        """""
-        new_hash = original_hash + 1
-        while new_hash != original_hash:
-            if new_hash >= len(self.table):
-                new_hash = 0
-                continue
-            if self.table[new_hash] is None:
-                element.hash = new_hash
-                self.table[new_hash] = element
-                print("объект со значением %i имеет хэш: %i (рехешировано. коллизия была в хеше: %i)"
-                      % (self.table[new_hash].value1, element.hash, original_hash))
-                return
-            new_hash += 1
-        print("таблица заполнена!")
-        return
-#вывод
-simple_re = SimpleRehashTable(ClassForRehash.MAX_HASH_TABLE)
-for i in range(len(simple_re.table) + 2):
-    simple_re.add_el(ClassForRehash(random.randint(0, 8)))
+    # Переопределяем метод less then для работы PriorityQueue
+    def __lt__(self, other):
+        return self.start_distance+self.finish_distance < other.start_distance+other.finish_distance
+N = 4
+# Генератор сдвигов
+def shifts(position):
+# Находим индекс нуля
+    zeroPosition = position.index(0)
+# Находим его позицию в поле 4х4, где  i это номер строки,а j номер столбца
+    i, j = divmod(zeroPosition, N)
+    displacement = []
+# В зависимости от местоположения нуля, смотрим варианты, куда его можно сдвинуть
+    if i > 0: displacement.append(-N)     # вверх
+    if i < N - 1: displacement.append(N)  # вниз
+    if j > 0: displacement.append(-1)     # влево
+    if j < N - 1: displacement.append(1)  # вправо
+    for offset in displacement:
+# считаем индексы новых позиций нуля
+        swap = zeroPosition + offset
+# Выводим новое состояние поля, где 0 сдвинут в одном из возможных направлений
+        yield tuple(position[swap]
+        if x==zeroPosition
+        else position[zeroPosition]
+        if x==swap
+        else position[x]
+        for x in range(N*N))
 
 
-#случайное
-
-class RandomRehashTable:
-
-    def __init__(self, length):
-        self.table = [None] * length
-
-    def add_el(self, element):
-        original_hash = element.hash
-        if self.table[original_hash] is None:
-            self.table[original_hash] = element
-            print("объект со значением %i имеет хэш: %i (рехеширование не требовалось)"
-                  % (self.table[original_hash].value1, original_hash))
-            return
-
-        """""
-        случайное рехеширование
-        """""
-        table_len = len(self.table)
-        r = 1
-        for ii in range(10):  # range(число попыток определить новый хеш)
-            r *= 5
-            r = r % (4 * table_len)
-            new_hash = r // 4
-            if self.table[new_hash] is None:
-                element.hash = new_hash
-                self.table[new_hash] = element
-                print("объект со значением %i имеет хэш: %i (рехешировано. коллизия была в хеше: %i)"
-                      % (self.table[new_hash].value1, element.hash, original_hash))
-                return
-        print("Не удалось найти свободный хеш в таблице!")
-        return
-#вывод
-random_re = RandomRehashTable(ClassForRehash.MAX_HASH_TABLE)
-for i in range(len(random_re.table) + 2):
-    random_re.add_el(ClassForRehash(random.randint(0, 9)))
-
-#метод цепочек
-class ChainRehashTable:
-
-    def __init__(self, length):
-        self.table = [None] * length
-    def add_el(self, element):
-        """""
-        метод цепочек
-        """""
-        original_hash = element.hashh
-        print(element.hashh)
-        if self.table[original_hash] is None:
-            self.table[original_hash] = [element]
-            return
-        else:
-            self.table[original_hash].append(element)
-            return
-
-
-# вывод
-chain_re = ChainRehashTable(ClassForRehash.MAX_HASH_TABLE)
-for i in range(len(chain_re.table)):
-    chain_re.add_el(ClassForRehash(random.randint(0, 7)))
-hash = 0
-for x in chain_re.table:  # вывод хеш таблицы для метода цепочек
-    print("[hash: %i]" % hash, end=" ")
-    if x is None:
-        print("Пусто")
+# Проверяет четность неправильных пар
+def parityOfPairs(state):
+    countOfPairs = 0
+    for i in range(len(state)-1):
+        if state[i] > state[i+1]:
+            countOfPairs +=1
+    return countOfPairs % 2
+def fifteenGame(startState):
+    ccount = 0
+    terminalState = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0)
+    # Если количество неправильных пар четное, то такая позиция нерешаема
+    if parityOfPairs(startState)==0:
+        print("Нет решений")
     else:
-        for y in x:
-            print(y.value1, end=" ")
-        print("")
-    hash += 1
+    # В противном случае создаем из начальной позиции кортеж
+        startState= tuple(startState)
+    # создаем экзмепляр класса, с кортежем стартовой позиции в качестве параметра,длиной пути от начала до текущей точки
+    # и длиной от текущей позиции до конца
+        p = Position(startState, 0,0)
 
-# glt = [5,7,9,8,3,2]
-# j = 12
-# if j in glt:
-#     print(j)
-# else: print("Число не найдено")
+    # Создаем экземпляр класса приоритетной очереди
+        fieldStates= PriorityQueue()
+    # Заносим в нее пару-это кортеж стартовой позиции, и вес данной вершины
+        fieldStates.put(p)
+    # Создаем множество посещенных вершин
+        closePoints = set([p])
+    # Создаем словарь в котором будем хранить позиции,где для каждой будет определена ее предыдущая позиция
+        parents = {p.position: None}
+
+    # Пока позиция не будет равна решению
+
+        while p.position != terminalState:
+    # Получаем приоритетную позицию
+            p =fieldStates.get()
+
+
+    # для каждого варианта передвижения нуля в одном состоянии поля
+            for k in shifts(p.position):
+                count= 0
+                ccount+=1
+                if ccount
+    # Если такой вариант передвижения не находится в списке посещенных
+                if k not in closePoints:
+    # Расчитаем растояние до терминального состояния, это количество цифр стоящих не на своих местах
+                    for m in range(len(k)):
+                        if k[m] != terminalState[m]:
+                            count+=1
+
+    # То мы заносим его в очередь, с состоянием в качестве параметра, длиной пути от старта до текущего сосотояния
+    # и длиной до финиша
+
+                    fieldStates.put(Position(k, p.start_distance +1,p.finish_distance+count))
+    # в словарь добавляем новый ключ, то есть эту позицию, его значением будет предыдущая позиция
+                    parents[k] = p
+
+    # Добавляем этот вариант перемещения в посещенный
+                    closePoints.add(k)
+
+        path = []
+        x = p
+        previous = p
+
+        while p.position != startState:
+
+    # Берем из словаря родителя текущего состояния поля
+
+            p = parents[p.position]
+
+# Запоминаем индекс нуля из текущего состояния и по этому индексу находим элемент, который сдвинули в предыдущем состоянии
+            number = p.position[previous.position.index(0)]
+            path.append(number)
+    # Предыдущее состояние делаем текущим
+            previous = p
+            test.append(p)
+
+    # Разворачиваем путь, чтобы получить путь от первого до последнего сдвига
+        path.reverse()
+
+    if parityOfPairs(startState)!=0:
+        for reverse_print in range(len(path)):
+            print(f"\n{test.pop()}")
+        print(f"\n{x}\n\n{path}\nЧисло шагов: {len(path)}")
+startState = [1,2,3,4,5,6,7,8,13,9,11,12, 10,14,15,0]
+fifteenGame(startState)
